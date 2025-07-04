@@ -1,1 +1,69 @@
+name: Deploy Backend
 
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build on GitHub Runner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Build (if needed)
+        run: |
+          if [ -f tsconfig.json ]; then
+            npm run build
+          else
+            echo "No build step"
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-artifact
+          path: |
+            ./*
+            !node_modules
+
+  deploy:
+    name: Deploy on Self-Hosted EC2
+    needs: build
+    runs-on: [self-hosted, linux]
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-artifact
+          path: ~/deploy-temp/backend
+
+      - name: Copy to deploy folder
+        run: |
+          rm -rf ~/deploy/backend/*
+          cp -r ~/deploy-temp/backend/* ~/deploy/backend/
+
+      - name: Install production dependencies
+        working-directory: ~/deploy/backend
+        run: npm install --production
+
+      - name: Restart PM2
+        working-directory: ~/deploy/backend
+        run: |
+          if pm2 list | grep my-backend-app; then
+            pm2 restart my-backend-app
+          else
+            pm2 start ecosystem.config.js --name my-backend-app
+          fi
