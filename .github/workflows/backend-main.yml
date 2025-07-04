@@ -37,7 +37,8 @@ jobs:
           path: |
             ./*
             !node_modules
-
+            ecosystem.config.js
+            
   deploy:
     name: Deploy on Self-Hosted EC2
     needs: build
