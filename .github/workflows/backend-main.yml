@@ -48,7 +48,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend-artifact
-          path: ~/deploy-temp/backend
+          path: /home/ubuntu/deploy-temp/backend
 
       - name: Copy to deploy folder
         run: |
@@ -56,18 +56,14 @@ jobs:
           cp -r /home/ubuntu/deploy-temp/backend/* /home/ubuntu/deploy/backend/
 
       - name: Install production dependencies
-        working-directory:  working-directory: /home/ubuntu/deploy/backend
+        working-directory: /home/ubuntu/deploy/backend
         run: npm install --production
 
       - name: Restart PM2
-        working-directory:  working-directory: /home/ubuntu/deploy/backend
+        working-directory: /home/ubuntu/deploy/backend
         run: |
           if pm2 list | grep my-backend-app; then
             pm2 restart my-backend-app
           else
             pm2 start ecosystem.config.js --name my-backend-app
           fi
-
-
-
-
