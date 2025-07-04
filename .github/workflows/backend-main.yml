@@ -54,13 +54,13 @@ jobs:
         run: |
           rm -rf /home/ubuntu/deploy/backend/*
           cp -r /home/ubuntu/deploy-temp/backend/* /home/ubuntu/deploy/backend/
-           
+
       - name: Install production dependencies
-        working-directory: ~/deploy/backend
+        working-directory:  working-directory: /home/ubuntu/deploy/backend
         run: npm install --production
 
       - name: Restart PM2
-        working-directory: ~/deploy/backend
+        working-directory:  working-directory: /home/ubuntu/deploy/backend
         run: |
           if pm2 list | grep my-backend-app; then
             pm2 restart my-backend-app
