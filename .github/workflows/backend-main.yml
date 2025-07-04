@@ -52,9 +52,9 @@ jobs:
 
       - name: Copy to deploy folder
         run: |
-          rm -rf ~/deploy/backend/*
-          cp -r ~/deploy-temp/backend/* ~/deploy/backend/
-
+          rm -rf /home/ubuntu/deploy/backend/*
+          cp -r /home/ubuntu/deploy-temp/backend/* /home/ubuntu/deploy/backend/
+           
       - name: Install production dependencies
         working-directory: ~/deploy/backend
         run: npm install --production
