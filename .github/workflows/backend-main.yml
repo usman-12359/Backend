@@ -1,11 +1,13 @@
-name: Deploy Backend
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
-  build:
-    name: Build on GitHub Runner
+
+jobs:
+  build-frontend:
+    name: Build Frontend
     runs-on: ubuntu-latest
 
     steps:
@@ -15,54 +17,93 @@ on:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 18
 
       - name: Install dependencies
+        working-directory: frontend
         run: npm install
 
-      - name: Run Build (if needed)
-        run: |
-          if [ -f tsconfig.json ]; then
-            npm run build
-          else
-            echo "No build step"
-          fi
+      - name: Build
+        working-directory: frontend
+        run: npm run build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-artifact
-          path: |
-            ./**
-            !node_modules
+          name: frontend-build
+          path: frontend/build
 
-            
-  deploy:
-    name: Deploy on Self-Hosted EC2
-    needs: build
+  deploy-frontend:
+    name: Deploy Frontend to EC2
+    needs: build-frontend
     runs-on: [self-hosted, linux]
 
     steps:
-      - name: Download artifact
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: backend-artifact
-          path: /home/ubuntu/deploy-temp/backend
+          name: frontend-build
+          path: ~/deploy-temp/build
 
-      - name: Copy to deploy folder
+      - name: Copy to deployment folder
         run: |
-          rm -rf /home/ubuntu/deploy/backend/*
-          cp -r /home/ubuntu/deploy-temp/backend/* /home/ubuntu/deploy/backend/
+          rm -rf ~/deploy/frontend/*
+          cp -r ~/deploy-temp/build/* ~/deploy/frontend/
 
-      - name: Install production dependencies
-        working-directory: /home/ubuntu/deploy/backend
-        run: npm install --production
+          name: CI/CD Pipeline
 
-      - name: Restart PM2
-        working-directory: /home/ubuntu/deploy/backend
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/build
+
+  deploy-frontend:
+    name: Deploy Frontend to EC2
+    needs: build-frontend
+    runs-on: [self-hosted, linux]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ~/deploy-temp/build
+
+      - name: Copy to deployment folder
         run: |
-          if pm2 list | grep my-backend-app; then
-            pm2 restart my-backend-app
-          else
-            pm2 start ecosystem.config.js --name my-backend-app
-          fi
+          rm -rf ~/deploy/frontend/*
+          cp -r ~/deploy-temp/build/* ~/deploy/frontend/
