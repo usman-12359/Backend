@@ -17,12 +17,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install dependencies
+        working-directory: backend
         run: npm install
 
       - name: Run Build (if needed)
+        working-directory: backend
         run: |
           if [ -f tsconfig.json ]; then
             npm run build
@@ -34,10 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-artifact
-          path: |
-            ./*
-            !node_modules
-            ecosystem.config.js
+          path: backend/**
             
   deploy:
     name: Deploy on Self-Hosted EC2
@@ -68,9 +67,3 @@ jobs:
           else
             pm2 start ecosystem.config.js --name my-backend-app
           fi
-
-
-
-
-
-
