@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Deploy Backend
 
 on:
   push:
@@ -6,10 +6,8 @@ on:
       - main
 
 jobs:
-  build-frontend:
-    name: Build Frontend
+  build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,40 +15,49 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install dependencies
-        working-directory: frontend
         run: npm install
 
       - name: Build
-        working-directory: frontend
         run: npm run build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-build
-          path: frontend/build
-
-  deploy-frontend:
-    name: Deploy Frontend to EC2
-    needs: build-frontend
+          name: backend-artifact
+          path: |
+            ./**
+            !node_modules
+          
+  deploy:
+    needs: build
     runs-on: [self-hosted, linux]
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download build artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: frontend-build
-          path: ~/deploy-temp/build
+          name: backend-artifact
+          path: /home/ubuntu/deploy-temp/backend
 
-      - name: Copy to deployment folder
+      - name: Copy to deploy folder
         run: |
-          rm -rf ~/deploy/frontend/*
-          cp -r ~/deploy-temp/build/* ~/deploy/frontend/
+          rm -rf /home/ubuntu/deploy/backend/*
+          cp -r /home/ubuntu/deploy-temp/backend/* /home/ubuntu/deploy/backend/
 
-          
+      - name: Install production dependencies
+        working-directory: /home/ubuntu/deploy/backend
+        run: npm install --omit=dev
+
+      - name: Restart PM2
+        working-directory: /home/ubuntu/deploy/backend
+        run: |
+          if [ -f ecosystem.config.js ]; then
+            if pm2 list | grep my-backend-app; then
+              pm2 restart my-backend-app
+            else
+              pm2 start ecosystem.config.js --name my-backend-app
+            fi
+          else
+            echo "No ecosystem.config.js found. PM2 not started."
